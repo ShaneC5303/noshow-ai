@@ -1,0 +1,112 @@
+[
+  {
+    "id": 1,
+    "age": 13,
+    "leadDays": 57,
+    "riskScore": 0.86,
+    "reasons": [
+      "LeadDays (+0.97)",
+      "Age (+0.50)"
+    ],
+    "reminderMessage": "Hi! We know it\u2019s been almost two months since you scheduled your 13-year-old\u2019s appointment. Just reminding you it's tomorrow! Reply C to confirm, or text us back if you need to reschedule."
+  },
+  {
+    "id": 2,
+    "age": 11,
+    "leadDays": 30,
+    "riskScore": 0.85,
+    "reasons": [
+      "LeadDays (+0.80)",
+      "Age (+0.50)"
+    ],
+    "reminderMessage": "Hi! We know it\u2019s been a full month since you booked your 11-year-old\u2019s appointment. Quick reminder that their visit is coming up! Reply YES to confirm or call us if you need to reschedule."
+  },
+  {
+    "id": 3,
+    "age": 1,
+    "leadDays": 59,
+    "riskScore": 0.84,
+    "reasons": [
+      "LeadDays (+1.17)",
+      "Age (+0.34)"
+    ],
+    "reminderMessage": "Hi! It\u2019s been 2 months since you booked your baby's 1-year checkup. We can\u2019t wait to celebrate their big growth milestones! Reply YES to confirm or let us know if you need to reschedule."
+  },
+  {
+    "id": 4,
+    "age": 11,
+    "leadDays": 63,
+    "riskScore": 0.83,
+    "reasons": [
+      "LeadDays (+1.02)",
+      "Age (+0.27)"
+    ],
+    "reminderMessage": "Hi! Since it's been over two months since you booked your child's appointment, here is a friendly reminder for Tuesday at 3 PM. We look forward to seeing your 11-year-old! Reply C to confirm or R to reschedule."
+  },
+  {
+    "id": 5,
+    "age": 9,
+    "leadDays": 103,
+    "riskScore": 0.83,
+    "reasons": [
+      "LeadDays (+1.15)",
+      "Age (+0.58)"
+    ],
+    "reminderMessage": "Hi there! Since it's been over 100 days since you booked your 9-year-old's appointment, here is a quick reminder for tomorrow. Reply YES to confirm or let us know if you need to reschedule around school."
+  },
+  {
+    "id": 6,
+    "age": 35,
+    "leadDays": 40,
+    "riskScore": 0.83,
+    "reasons": [
+      "LeadDays (+1.00)",
+      "Scholarship (+0.23)"
+    ],
+    "reminderMessage": "Hi there! Since it\u2019s been 40 days since you booked, here is a quick reminder for your upcoming visit. Remember, your appointment is fully covered under your scholarship. Reply YES to confirm you'll be there!"
+  },
+  {
+    "id": 7,
+    "age": 31,
+    "leadDays": 34,
+    "riskScore": 0.83,
+    "reasons": [
+      "LeadDays (+1.03)",
+      "SMS_received (+0.21)"
+    ],
+    "reminderMessage": "Hi! Since it has been a month since you booked your loved one's visit, we wanted to check in. Please reply YES to this message to confirm they can still make it. See you soon!"
+  },
+  {
+    "id": 8,
+    "age": 10,
+    "leadDays": 59,
+    "riskScore": 0.83,
+    "reasons": [
+      "LeadDays (+1.02)",
+      "Age (+0.41)"
+    ],
+    "reminderMessage": "Hi! We know it has been nearly two months since you booked your 10-year-old\u2019s appointment. Just a friendly reminder that it's coming up soon! Reply YES to confirm or let us know if you need to reschedule."
+  },
+  {
+    "id": 9,
+    "age": 15,
+    "leadDays": 54,
+    "riskScore": 0.83,
+    "reasons": [
+      "LeadDays (+0.95)",
+      "Age (+0.52)"
+    ],
+    "reminderMessage": "Hi! Since it\u2019s been almost two months since you booked your teen's appointment, we know 15-year-olds' schedules change fast. Please reply YES to confirm their upcoming visit or text us to reschedule!"
+  },
+  {
+    "id": 10,
+    "age": 2,
+    "leadDays": 59,
+    "riskScore": 0.83,
+    "reasons": [
+      "LeadDays (+1.12)",
+      "Age (+0.29)"
+    ],
+    "reminderMessage": "Hi! Since it's been two months since you booked, we know life with a 2-year-old gets busy! Friendly reminder of your toddler's upcoming appointment. Reply C to confirm or text us to reschedule anytime."
+  }
+]
