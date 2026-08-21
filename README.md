@@ -1,5 +1,7 @@
 # No-Show AI
 
+**Live demo:** https://noshow-ai.vercel.app
+
 Predicts appointment no-show risk, explains the risk drivers, and generates a personalized
 reminder message for high-risk bookings — built for our AI & DS capstone (PRC-I).
 
@@ -8,11 +10,11 @@ reminder message for high-risk bookings — built for our AI & DS capstone (PRC-
 1. **Risk model** — XGBoost classifier trained on booking/behavioral data (ROC-AUC 0.72)
 2. **Explainability** — SHAP breaks down *why* each booking is flagged
 3. **Personalization** — Gemini drafts a reminder message tailored to each booking's risk factors
-4. **Dashboard** — React frontend + Express backend showing it all end-to-end
+4. **Dashboard** — React frontend + Express backend showing it all end-to-end, deployed live
 
 ## Project structure
 
-## Running it
+## Running it locally
 
 **1. Python pipeline** (from `notebooks/`)
 ```bash
@@ -36,6 +38,11 @@ node server.js   # http://localhost:4000
 npm install
 npm run dev       # http://localhost:5173
 ```
+
+## Deployment
+
+- Backend: Render (free tier — spins down after 15 min idle, first request after that takes ~30-50s to wake up)
+- Frontend: Vercel
 
 ## Dataset
 
