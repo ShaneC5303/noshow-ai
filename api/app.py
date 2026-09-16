@@ -71,8 +71,12 @@ def predict():
                 f"because of: {', '.join(reasons)}. Be specific to the reason, not generic. "
                 f"No placeholder brackets."
             )
-            resp = gemini_client.models.generate_content(model="gemini-3.6-flash", contents=prompt)
-            message = resp.text.strip()
+            try:
+                resp = gemini_client.models.generate_content(model="gemini-3.6-flash", contents=prompt)
+                message = resp.text.strip()
+            except Exception as e:
+                print(f"Gemini call failed for row {rank}: {e}")
+                message = "Reminder message unavailable right now — please contact the patient directly."
 
         results.append({
             "id": rank + 1,
