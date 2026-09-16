@@ -50,14 +50,16 @@ def predict():
     X = df[features]
 
     probs = model.predict_proba(X)[:, 1]
-    shap_values = explainer(X)
-
     top_idx = probs.argsort()[::-1][:10]
+
+    X_top = X.iloc[top_idx].reset_index(drop=True)
+    shap_values = explainer(X_top)
+
     results = []
     for rank, i in enumerate(top_idx):
         row = X.iloc[i]
         risk = float(probs[i])
-        contribs = sorted(zip(features, shap_values.values[i]), key=lambda x: -x[1])[:2]
+        contribs = sorted(zip(features, shap_values.values[rank]), key=lambda x: -x[1])[:2]
         reasons = [f"{feat} ({'+' if val > 0 else ''}{val:.2f})" for feat, val in contribs]
 
         message = ""
