@@ -6,3 +6,4 @@ xgboost
 shap
 joblib
 google-genai
+groq

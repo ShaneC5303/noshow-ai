@@ -5,6 +5,7 @@ import shap
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from google import genai
+from groq import Groq
 
 app = Flask(__name__)
 CORS(app)
@@ -17,6 +18,10 @@ explainer = shap.TreeExplainer(model)
 gemini_client = None
 if os.environ.get("GEMINI_API_KEY"):
     gemini_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+groq_client = None
+if os.environ.get("GROQ_API_KEY"):
+    groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
 
 @app.route("/predict", methods=["POST"])
@@ -77,6 +82,15 @@ def predict():
             except Exception as e:
                 print(f"Gemini call failed for row {rank}: {e}")
                 message = "Reminder message unavailable right now — please contact the patient directly."
+                if groq_client:
+                    try:
+                        groq_resp = groq_client.chat.completions.create(
+                            model="openai/gpt-oss-120b",
+                            messages=[{"role": "user", "content": prompt}],
+                        )
+                        message = groq_resp.choices[0].message.content.strip()
+                    except Exception as e2:
+                        print(f"Groq fallback also failed for row {rank}: {e2}")
 
         results.append({
             "id": rank + 1,
