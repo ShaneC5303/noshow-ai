@@ -5,6 +5,7 @@ import shap
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from google import genai
+from google.genai import types
 from groq import Groq
 
 app = Flask(__name__)
@@ -77,7 +78,13 @@ def predict():
                 f"No placeholder brackets."
             )
             try:
-                resp = gemini_client.models.generate_content(model="gemini-3.6-flash", contents=prompt)
+                resp = gemini_client.models.generate_content(
+                    model="gemini-3.6-flash",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        http_options=types.HttpOptions(timeout=8000)
+                    ),
+                )
                 message = resp.text.strip()
             except Exception as e:
                 print(f"Gemini call failed for row {rank}: {e}")
