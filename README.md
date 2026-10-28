@@ -51,3 +51,28 @@ npm run dev       # http://localhost:5173
 ## Team
 
 G. Sai Mahin, Y. Shane, Varun Paleru — guided by R. Navyatha, KLH University
+
+## Results (5-fold stratified CV, mean ± std)
+
+| Model | ROC-AUC | Precision | Recall | F1 |
+|---|---|---|---|---|
+| Logistic Regression | 0.661 ± 0.003 | 0.317 ± 0.001 | 0.559 ± 0.005 | 0.405 ± 0.002 |
+| XGBoost | 0.720 ± 0.002 | 0.308 ± 0.001 | 0.792 ± 0.008 | 0.443 ± 0.002 |
+| LightGBM | 0.720 ± 0.002 | 0.308 ± 0.002 | 0.790 ± 0.009 | 0.443 ± 0.003 |
+
+XGBoost and LightGBM are statistically tied. SHAP shows lead time is the dominant risk driver, followed by age.
+
+## Run the pieces
+
+- `python notebooks/cross_validation_comparison.py` for the 3-model CV comparison
+- `python notebooks/shap_explain.py` for the SHAP summary plot
+- `python notebooks/train_and_save_model.py` to create `model.pkl`
+- `cd api && gunicorn app:app --workers 1 --timeout 120` for the Flask API
+- `cd backend && node server.js` for the Node API
+- `cd frontend && npm run dev` for the dashboard
+
+## Live
+
+- Dashboard: https://noshow-ai.vercel.app
+- Upload any CSV and the app scores it, explains the top 10 with SHAP, and drafts reminders. Only 5,000 rows are scored per upload.
+- The free Render tier sleeps, so the first request can take about 40 seconds.
