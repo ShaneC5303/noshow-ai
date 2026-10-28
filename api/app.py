@@ -233,15 +233,21 @@ def analyze():
     for r in res["results"]:
         prompts.append(
             "Write a short, friendly appointment reminder text (under 40 words) for a client. "
-            f"Booking details: {r['details']}. This booking was flagged as likely to be missed, mainly "
-            f"because of: {', '.join(r['reasons'])}. Be specific to those reasons without mentioning "
-            "scores, models or AI. Address the reader directly as 'you'. No placeholder brackets."
+            f"Use only these booking details: {r['details']}. "
+            "Ask them to confirm or reschedule. Do NOT mention spending, purchases, past visits, "
+            "missed appointments, risk, scores, models or AI. Do not invent names, times or dates "
+            "that are not in the details. Address the reader directly as 'you'. No placeholder brackets."
         )
     with ThreadPoolExecutor(max_workers=10) as pool:
         msgs = list(pool.map(lambda a: llm_text(a[1], a[0]), enumerate(prompts)))
     for r, m in zip(res["results"], msgs):
         r["reminderMessage"] = m
     return jsonify(res)
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"})
 
 
 if __name__ == "__main__":
