@@ -1,4 +1,5 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import joblib
 import shap
@@ -6,10 +7,16 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from google import genai
 from google.genai import types
-from groq import Groq
+
+try:
+    from groq import Groq
+except Exception:
+    Groq = None
 
 app = Flask(__name__)
 CORS(app)
+
+MAX_ROWS = 5000
 
 bundle = joblib.load("../notebooks/model.pkl")
 model = bundle["model"]
@@ -21,8 +28,44 @@ if os.environ.get("GEMINI_API_KEY"):
     gemini_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 groq_client = None
-if os.environ.get("GROQ_API_KEY"):
+if Groq and os.environ.get("GROQ_API_KEY"):
     groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
+
+
+def make_message(rank, age, lead, risk, reasons):
+    fallback = "Reminder message unavailable right now - please contact the patient directly."
+    if not gemini_client and not groq_client:
+        return ""
+    prompt = (
+        f"Write a short, friendly appointment reminder text (under 40 words) for a "
+        f"patient's guardian. The patient is {age} years old, booked "
+        f"{lead} days ago. Predicted no-show risk: {risk:.0%}, mainly "
+        f"because of: {', '.join(reasons)}. Be specific to the reason, not generic. "
+        f"No placeholder brackets."
+    )
+    if gemini_client:
+        try:
+            resp = gemini_client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    http_options=types.HttpOptions(timeout=8000)
+                ),
+            )
+            return resp.text.strip()
+        except Exception as e:
+            print(f"Gemini failed for row {rank}: {e}")
+    if groq_client:
+        try:
+            r = groq_client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=[{"role": "user", "content": prompt}],
+                timeout=8,
+            )
+            return r.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"Groq failed for row {rank}: {e}")
+    return fallback
 
 
 @app.route("/predict", methods=["POST"])
@@ -52,7 +95,10 @@ def predict():
     if missing:
         return jsonify({"error": f"Missing columns: {missing}"}), 400
 
-    df = df[df["Age"] >= 0].reset_index(drop=True)
+    df = df[df["Age"] >= 0]
+    if len(df) > MAX_ROWS:
+        df = df.sample(MAX_ROWS, random_state=42)
+    df = df.reset_index(drop=True)
     X = df[features]
 
     probs = model.predict_proba(X)[:, 1]
@@ -61,51 +107,26 @@ def predict():
     X_top = X.iloc[top_idx].reset_index(drop=True)
     shap_values = explainer(X_top)
 
-    results = []
+    rows = []
     for rank, i in enumerate(top_idx):
         row = X.iloc[i]
         risk = float(probs[i])
         contribs = sorted(zip(features, shap_values.values[rank]), key=lambda x: -x[1])[:2]
         reasons = [f"{feat} ({'+' if val > 0 else ''}{val:.2f})" for feat, val in contribs]
+        rows.append((rank, int(row["Age"]), int(row["LeadDays"]), risk, reasons))
 
-        message = ""
-        if gemini_client:
-            prompt = (
-                f"Write a short, friendly appointment reminder text (under 40 words) for a "
-                f"patient's guardian. The patient is {int(row['Age'])} years old, booked "
-                f"{int(row['LeadDays'])} days ago. Predicted no-show risk: {risk:.0%}, mainly "
-                f"because of: {', '.join(reasons)}. Be specific to the reason, not generic. "
-                f"No placeholder brackets."
-            )
-            try:
-                resp = gemini_client.models.generate_content(
-                    model="gemini-3.6-flash",
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        http_options=types.HttpOptions(timeout=8000)
-                    ),
-                )
-                message = resp.text.strip()
-            except Exception as e:
-                print(f"Gemini call failed for row {rank}: {e}")
-                message = "Reminder message unavailable right now — please contact the patient directly."
-                if groq_client:
-                    try:
-                        groq_resp = groq_client.chat.completions.create(
-                            model="openai/gpt-oss-120b",
-                            messages=[{"role": "user", "content": prompt}],
-                        )
-                        message = groq_resp.choices[0].message.content.strip()
-                    except Exception as e2:
-                        print(f"Groq fallback also failed for row {rank}: {e2}")
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        messages = list(pool.map(lambda r: make_message(*r), rows))
 
+    results = []
+    for (rank, age, lead, risk, reasons), msg in zip(rows, messages):
         results.append({
             "id": rank + 1,
-            "age": int(row["Age"]),
-            "leadDays": int(row["LeadDays"]),
+            "age": age,
+            "leadDays": lead,
             "riskScore": round(risk, 2),
             "reasons": reasons,
-            "reminderMessage": message,
+            "reminderMessage": msg,
         })
 
     return jsonify(results)
