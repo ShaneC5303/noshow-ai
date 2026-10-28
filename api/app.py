@@ -7,6 +7,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from google import genai
 from google.genai import types
+import auto_pipeline
 
 try:
     from groq import Groq
@@ -38,10 +39,10 @@ def make_message(rank, age, lead, risk, reasons):
         return ""
     prompt = (
         f"Write a short, friendly appointment reminder text (under 40 words) for a "
-        f"patient's guardian. The patient is {age} years old, booked "
+        f"{'patient' if age >= 18 else 'patient' + chr(39) + 's parent or guardian'}. The patient is {age} years old, booked "
         f"{lead} days ago. Predicted no-show risk: {risk:.0%}, mainly "
         f"because of: {', '.join(reasons)}. Be specific to the reason, not generic. "
-        f"No placeholder brackets."
+        f"No placeholder brackets. Address the reader directly as 'you'."
     )
     if gemini_client:
         try:
@@ -162,6 +163,85 @@ def predict_one():
         "reasons": reasons,
         "reminderMessage": msg,
     })
+
+
+def llm_text(prompt, rank):
+    if gemini_client:
+        try:
+            resp = gemini_client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(http_options=types.HttpOptions(timeout=8000)),
+            )
+            return resp.text.strip()
+        except Exception as e:
+            print(f"Gemini failed for row {rank}: {e}")
+    if groq_client:
+        try:
+            r = groq_client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=[{"role": "user", "content": prompt}],
+                timeout=8,
+            )
+            return r.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"Groq failed for row {rank}: {e}")
+    if gemini_client or groq_client:
+        return "Reminder message unavailable right now - please contact the client directly."
+    return ""
+
+
+def clinic_compatible(df):
+    need = [f for f in features if f != "LeadDays"]
+    has_lead = "LeadDays" in df.columns or ("ScheduledDay" in df.columns and "AppointmentDay" in df.columns)
+    return all(f in df.columns for f in need) and has_lead
+
+
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    f = request.files["file"]
+    try:
+        df = pd.read_csv(f)
+    except Exception:
+        return jsonify({"error": "Could not read that as a CSV"}), 400
+    df.columns = df.columns.astype(str).str.strip()
+    if df.shape[1] < 2 or len(df) < 2:
+        return jsonify({"error": "That file does not look like a table with several columns."}), 400
+    target = (request.form.get("target") or "").strip() or None
+
+    # Fast path: the original clinic format uses the pre-trained model
+    if target is None and clinic_compatible(df):
+        f.stream.seek(0)
+        resp = predict()
+        if isinstance(resp, tuple):
+            return resp
+        return jsonify({"mode": "clinic", "results": resp.get_json()})
+
+    try:
+        res = auto_pipeline.run(df, target)
+    except auto_pipeline.NeedsTarget as e:
+        return jsonify({"needs_target": True, "candidates": e.candidates, "columns": list(df.columns)})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        print("analyze failed:", repr(e))
+        return jsonify({"error": "Could not analyse this file. Check that it is a normal CSV with a no-show column."}), 400
+
+    prompts = []
+    for r in res["results"]:
+        prompts.append(
+            "Write a short, friendly appointment reminder text (under 40 words) for a client. "
+            f"Booking details: {r['details']}. This booking was flagged as likely to be missed, mainly "
+            f"because of: {', '.join(r['reasons'])}. Be specific to those reasons without mentioning "
+            "scores, models or AI. Address the reader directly as 'you'. No placeholder brackets."
+        )
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        msgs = list(pool.map(lambda a: llm_text(a[1], a[0]), enumerate(prompts)))
+    for r, m in zip(res["results"], msgs):
+        r["reminderMessage"] = m
+    return jsonify(res)
 
 
 if __name__ == "__main__":
