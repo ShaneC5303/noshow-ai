@@ -132,6 +132,38 @@ def predict():
     return jsonify(results)
 
 
+@app.route("/predict_one", methods=["POST"])
+def predict_one():
+    d = request.get_json(silent=True) or {}
+    try:
+        row = {
+            "Age": int(d["age"]),
+            "LeadDays": int(d["leadDays"]),
+            "Scholarship": int(d.get("scholarship", 0)),
+            "Hipertension": int(d.get("hipertension", 0)),
+            "Diabetes": int(d.get("diabetes", 0)),
+            "SMS_received": int(d.get("sms", 0)),
+        }
+    except Exception:
+        return jsonify({"error": "age and leadDays are required numbers"}), 400
+    if row["Age"] < 0 or row["LeadDays"] < 0:
+        return jsonify({"error": "age and leadDays must be 0 or more"}), 400
+
+    X = pd.DataFrame([{f: row.get(f, 0) for f in features}])
+    risk = float(model.predict_proba(X)[:, 1][0])
+    sv = explainer(X)
+    contribs = sorted(zip(features, sv.values[0]), key=lambda x: -x[1])[:2]
+    reasons = [f"{f} ({'+' if v > 0 else ''}{v:.2f})" for f, v in contribs]
+    msg = make_message(0, row["Age"], row["LeadDays"], risk, reasons)
+    return jsonify({
+        "age": row["Age"],
+        "leadDays": row["LeadDays"],
+        "riskScore": round(risk, 2),
+        "reasons": reasons,
+        "reminderMessage": msg,
+    })
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
     app.run(host="0.0.0.0", port=port)
