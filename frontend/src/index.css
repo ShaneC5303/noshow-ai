@@ -177,3 +177,6 @@ h2.sec { font-family: var(--serif); font-weight: 600; font-size: 32px; letter-sp
 @media print { .cta, .acts { display: none; } }
 
 .drv .val { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.bk { display: grid; gap: 3px; }
+.bp small { color: var(--muted); font-size: 12px; margin-right: 4px; }

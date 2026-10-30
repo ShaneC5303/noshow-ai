@@ -29,6 +29,8 @@ const pretty = (f) => {
     const val = m[3].toLowerCase().replace(/^./, (c) => c.toUpperCase());
     return (m[1] === "last" ? "Previous " : "Booked ") + kind + ": " + val;
   }
+  m = f.match(/^(.+)_(weekday|month|hour)$/i);
+  if (m) return { weekday: "Day of the week", month: "Month of the year", hour: "Time of day" }[m[2].toLowerCase()];
   m = f.match(/^last_cum(.+)$/i);
   if (m) return "Past " + m[1].toLowerCase() + " (total)";
   return f.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
@@ -40,6 +42,9 @@ function describe(r) {
   if (r.details) return r.details;
   if (r.age !== undefined) return `Age ${r.age} · booked ${r.leadDays} days ahead`;
   return "";
+}
+function parts(r) {
+  return describe(r).split(" · ").map((p) => { const i = p.indexOf(": "); return i > 0 ? [p.slice(0, i).replace(/_/g, " "), p.slice(i + 2)] : ["", p]; });
 }
 function bookingText(r) {
   return describe(r).split(" · ").map((p) => { const i = p.indexOf(": "); return i > 0 ? p.slice(i + 2) : p; }).join(" · ");
@@ -84,7 +89,7 @@ function Entry({ r, rank, id, copied, onCopy }) {
     <div className="entry">
       <div className="c c-book" data-label="Booking" title={describe(r)}>
         {rank != null && <span className="rk">{rank}</span>}
-        <span className="bk">{bookingText(r)}</span>
+        <span className="bk">{parts(r).map(([k, v], i) => <span key={i} className="bp">{k && <small>{k}</small>} {v}</span>)}</span>
       </div>
       <div className="c" data-label="Predict">
         <span className={`pct ${lv}`}>{pct}%</span>

@@ -234,7 +234,7 @@ def analyze():
         prompts.append(
             "Write a short, friendly appointment reminder text (under 40 words) for a client. "
             f"Use only these booking details: {r['details']}. "
-            "Ask them to confirm or reschedule. Do NOT mention spending, purchases, past visits, "
+            "Ask them to confirm or reschedule. Do NOT mention insurance, self-pay, payment status, booking dates, spending, purchases, past visits, "
             "missed appointments, risk, scores, models or AI. Do not invent names, times or dates "
             "that are not in the details. Address the reader directly as 'you'. No placeholder brackets."
         )
