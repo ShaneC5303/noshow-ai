@@ -181,6 +181,24 @@ def prepare(df, target, y):
     return X, dropped, display
 
 
+def _contacts(df):
+    """Find an email column and a phone column. Used only for the send buttons."""
+    em = ph = None
+    for c in df.columns:
+        n = str(c).lower()
+        v = df[c].dropna().astype(str).head(50)
+        if len(v) == 0:
+            continue
+        if em is None and (re.search(r"e.?mail", n) or v.str.contains("@").mean() > 0.8):
+            em = c
+            continue
+        if ph is None and re.search(r"phone|mobile|whatsapp|cell|contact|tel", n):
+            d = v.str.replace(r"\.0$", "", regex=True).str.replace(r"\D", "", regex=True).str.len()
+            if d.between(8, 15).mean() > 0.6:
+                ph = c
+    return em, ph
+
+
 def run(df, target=None):
     """Train on the uploaded file and return metrics + the 10 riskiest rows."""
     df = df.reset_index(drop=True)
@@ -247,14 +265,20 @@ def run(df, target=None):
     top_idx = np.argsort(-oof)[:10]
     sv = explainer(X.iloc[top_idx])
     show_cols = [c for c in display.columns if c != target][:5]
+    em_c, ph_c = _contacts(df)
     rows = []
     for rank, i in enumerate(top_idx):
         contribs = sorted(zip(X.columns, sv.values[rank]), key=lambda t: -t[1])[:2]
         reasons = [f"{f} ({'+' if v > 0 else ''}{v:.2f})" for f, v in contribs]
         details = " · ".join(f"{c}: {display.iloc[i][c]}" for c in show_cols
                              if pd.notna(display.iloc[i][c]))
+        contact = {}
+        if em_c is not None and pd.notna(df.iloc[i][em_c]):
+            contact["email"] = str(df.iloc[i][em_c]).strip()
+        if ph_c is not None and pd.notna(df.iloc[i][ph_c]):
+            contact["phone"] = re.sub(r"\.0$", "", str(df.iloc[i][ph_c]).strip())
         rows.append({"id": rank + 1, "details": details, "riskScore": round(float(oof[i]), 2),
-                     "level": "high", "reasons": reasons})
+                     "level": "high", "reasons": reasons, "contact": contact})
 
     return {
         "mode": "trained",

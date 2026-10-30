@@ -72,30 +72,48 @@ function Pips({ pct, lv }) {
   return <div className={`pips ${lv}`} aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <i key={i} className={i < n ? "f" : ""} />)}</div>;
 }
 
-function Actions({ text, id, copied, onCopy }) {
-  const [open, setOpen] = useState(false);
+function Actions({ text, id, copied, onCopy, contact }) {
+  const [open, setOpen] = useState("");
   const [to, setTo] = useState("");
+  const [ph, setPh] = useState("");
   const [st, setSt] = useState("");
+  const [sentTo, setSentTo] = useState("");
   if (!text) return null;
-  const sendMail = async (e) => {
-    e.preventDefault();
+  const c = contact || {};
+  const toggle = (k) => { setOpen(open === k ? "" : k); setSt(""); };
+  const mask = (a) => { const [u, d] = a.split("@"); return (u[0] || "") + "***@" + (d || ""); };
+  const mailTo = async (addr) => {
     setSt("sending");
     try {
-      const res = await fetch(`${API}/send_email`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to, message: text }) });
+      const res = await fetch(`${API}/send_email`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: addr, message: text }) });
       const data = await res.json();
-      setSt(res.ok ? "sent" : data.error || "Could not send.");
+      if (res.ok) { setSentTo(mask(addr)); setSt("sent"); } else setSt(data.error || "Could not send.");
     } catch (err) { setSt("Could not reach the server."); }
   };
+  const waUrl = (num) => {
+    let d = String(num).replace(/\D/g, "");
+    if (d.length === 10) d = "91" + d;
+    return `https://wa.me/${d}?text=${encodeURIComponent(text)}`;
+  };
+  const onEmail = () => { if (c.email) { setOpen(""); mailTo(c.email); } else toggle("mail"); };
+  const onWa = () => { if (c.phone) window.open(waUrl(c.phone), "_blank"); else toggle("wa"); };
   return (
     <div className="acts">
       <button className="btn sm" onClick={() => onCopy(id, text)}>{copied === id ? "Copied" : "Copy"}</button>
-      <button className="btn sm" onClick={() => { setOpen(!open); setSt(""); }}>Email</button>
-      {open && (
-        <form className="mailrow" onSubmit={sendMail}>
+      <button className="btn sm" disabled={st === "sending"} onClick={onEmail}>{st === "sending" ? "Sending..." : "Email"}</button>
+      <button className="btn sm" onClick={onWa}>WhatsApp</button>
+      {st === "sent" && <span className="mok">Sent to {sentTo}</span>}
+      {st && st !== "sent" && st !== "sending" && <span className="mbad">{st}</span>}
+      {open === "mail" && (
+        <form className="mailrow" onSubmit={(e) => { e.preventDefault(); mailTo(to); }}>
           <input type="email" required placeholder="client@example.com" value={to} onChange={(e) => setTo(e.target.value)} />
-          <button className="btn sm solid" disabled={st === "sending"} type="submit">{st === "sending" ? "Sending..." : "Send"}</button>
-          {st === "sent" && <span className="mok">Sent</span>}
-          {st && st !== "sent" && st !== "sending" && <span className="mbad">{st}</span>}
+          <button className="btn sm solid" disabled={st === "sending"} type="submit">Send</button>
+        </form>
+      )}
+      {open === "wa" && (
+        <form className="mailrow" onSubmit={(e) => { e.preventDefault(); window.open(waUrl(ph), "_blank"); }}>
+          <input type="tel" required placeholder="98765 43210" value={ph} onChange={(e) => setPh(e.target.value)} />
+          <button className="btn sm solid" type="submit">Open WhatsApp</button>
         </form>
       )}
     </div>
@@ -122,7 +140,7 @@ function Entry({ r, rank, id, copied, onCopy }) {
       </div>
       <div className="c" data-label="Prevent">
         <div className={`bubble ${r.reminderMessage ? "" : "empty"}`}>{r.reminderMessage || "No reminder was generated for this booking."}</div>
-        <Actions text={r.reminderMessage} id={id} copied={copied} onCopy={onCopy} />
+        <Actions text={r.reminderMessage} id={id} copied={copied} onCopy={onCopy} contact={r.contact} />
       </div>
     </div>
   );
