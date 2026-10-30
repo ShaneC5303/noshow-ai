@@ -180,3 +180,5 @@ h2.sec { font-family: var(--serif); font-weight: 600; font-size: 32px; letter-sp
 
 .bk { display: grid; gap: 3px; }
 .bp small { color: var(--muted); font-size: 12px; margin-right: 4px; }
+
+a.btn { display: inline-block; text-decoration: none; }

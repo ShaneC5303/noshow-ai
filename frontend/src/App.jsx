@@ -77,7 +77,7 @@ function Actions({ text, id, copied, onCopy }) {
   return (
     <div className="acts">
       <button className="btn sm" onClick={() => onCopy(id, text)}>{copied === id ? "Copied" : "Copy"}</button>
-      <button className="btn sm" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank")}>Send on WhatsApp</button>
+      <a className="btn sm" href={`mailto:?subject=${encodeURIComponent("Your appointment reminder")}&body=${encodeURIComponent(text)}`}>Email</a>
     </div>
   );
 }
@@ -326,7 +326,7 @@ export default function App() {
             </div>
             <div className="fl">
               <div className="fl-h"><span className="fl-n">3</span><b>Prevent</b></div>
-              <p>Writes a short, polite reminder for each risky booking. Copy it or send it on WhatsApp.</p>
+              <p>Writes a short, polite reminder for each risky booking. Copy it or send it by email.</p>
               <div className="viz"><div className="bubble">Hi Ravi! Reply C to confirm your visit, or text us for a new time.</div></div>
             </div>
           </div>
