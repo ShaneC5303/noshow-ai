@@ -245,6 +245,45 @@ def analyze():
     return jsonify(res)
 
 
+_MAIL_LOG = {}
+
+
+@app.route("/send_email", methods=["POST"])
+def send_email():
+    import os, re, time
+    import requests as rq
+    key, sender = os.environ.get("BREVO_API_KEY"), os.environ.get("BREVO_SENDER")
+    if not key or not sender:
+        return jsonify({"error": "Email is not set up on the server yet."}), 503
+    d = request.get_json(silent=True) or {}
+    to = str(d.get("to", "")).strip()
+    msg = str(d.get("message", "")).strip()
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", to) or len(to) > 120:
+        return jsonify({"error": "Enter a valid email address."}), 400
+    if not msg or len(msg) > 800:
+        return jsonify({"error": "The message is empty or too long."}), 400
+    ip = (request.headers.get("X-Forwarded-For", request.remote_addr) or "").split(",")[0].strip()
+    now = time.time()
+    for k in ("all", ip):
+        _MAIL_LOG[k] = [t for t in _MAIL_LOG.get(k, []) if now - t < 3600]
+    if len(_MAIL_LOG["all"]) >= 30 or len(_MAIL_LOG[ip]) >= 5:
+        return jsonify({"error": "Email limit reached for now. Try again in an hour."}), 429
+    body = msg + "\n\n- Sent from the No-Show AI capstone demo."
+    try:
+        r = rq.post(
+            "https://api.brevo.com/v3/smtp/email", timeout=15,
+            headers={"api-key": key, "accept": "application/json", "content-type": "application/json"},
+            json={"sender": {"name": "No-Show AI demo", "email": sender},
+                  "to": [{"email": to}], "subject": "Your appointment reminder", "textContent": body})
+    except Exception:
+        return jsonify({"error": "Could not reach the email service."}), 502
+    if r.status_code >= 300:
+        return jsonify({"error": "The email service refused the message."}), 502
+    _MAIL_LOG["all"].append(now)
+    _MAIL_LOG[ip].append(now)
+    return jsonify({"ok": True})
+
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok"})

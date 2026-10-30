@@ -182,3 +182,8 @@ h2.sec { font-family: var(--serif); font-weight: 600; font-size: 32px; letter-sp
 .bp small { color: var(--muted); font-size: 12px; margin-right: 4px; }
 
 a.btn { display: inline-block; text-decoration: none; }
+
+.mailrow { display: flex; gap: 8px; flex-basis: 100%; flex-wrap: wrap; align-items: center; }
+.mailrow input { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); font: inherit; font-size: 14px; min-width: 210px; }
+.mok { color: var(--ok); font-weight: 600; font-size: 13px; }
+.mbad { color: var(--flag); font-size: 13px; }

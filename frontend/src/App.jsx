@@ -73,11 +73,31 @@ function Pips({ pct, lv }) {
 }
 
 function Actions({ text, id, copied, onCopy }) {
+  const [open, setOpen] = useState(false);
+  const [to, setTo] = useState("");
+  const [st, setSt] = useState("");
   if (!text) return null;
+  const sendMail = async (e) => {
+    e.preventDefault();
+    setSt("sending");
+    try {
+      const res = await fetch(`${API}/send_email`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to, message: text }) });
+      const data = await res.json();
+      setSt(res.ok ? "sent" : data.error || "Could not send.");
+    } catch (err) { setSt("Could not reach the server."); }
+  };
   return (
     <div className="acts">
       <button className="btn sm" onClick={() => onCopy(id, text)}>{copied === id ? "Copied" : "Copy"}</button>
-      <a className="btn sm" href={`mailto:?subject=${encodeURIComponent("Your appointment reminder")}&body=${encodeURIComponent(text)}`}>Email</a>
+      <button className="btn sm" onClick={() => { setOpen(!open); setSt(""); }}>Email</button>
+      {open && (
+        <form className="mailrow" onSubmit={sendMail}>
+          <input type="email" required placeholder="client@example.com" value={to} onChange={(e) => setTo(e.target.value)} />
+          <button className="btn sm solid" disabled={st === "sending"} type="submit">{st === "sending" ? "Sending..." : "Send"}</button>
+          {st === "sent" && <span className="mok">Sent</span>}
+          {st && st !== "sent" && st !== "sending" && <span className="mbad">{st}</span>}
+        </form>
+      )}
     </div>
   );
 }

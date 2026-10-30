@@ -8,3 +8,4 @@ joblib
 google-genai
 groq
 scikit-learn
+requests
