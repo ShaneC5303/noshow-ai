@@ -90,7 +90,7 @@ h2.sec { font-family: var(--serif); font-weight: 600; font-size: 28px; letter-sp
 .try .out-r { margin-top: 18px; border-top: 1px solid var(--line); }
 
 .rhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.cols, .entry { display: grid; grid-template-columns: 1.15fr 150px 1.25fr 1.7fr; gap: 28px; }
+.cols, .entry { display: grid; grid-template-columns: minmax(0, 1.15fr) 150px minmax(0, 1.25fr) minmax(0, 1.7fr); gap: 28px; }
 .cols { padding: 14px 0; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--line); }
 .cols div b { display: block; font-family: var(--serif); font-weight: 600; font-size: 19px; }
 .cols div span { font-size: 13px; color: var(--muted); }
@@ -137,3 +137,6 @@ button.slot { width: 100%; font: inherit; text-align: left; color: inherit; curs
 .peek { margin-top: 14px; padding: 14px; border-radius: 12px; background: var(--paper); display: grid; gap: 12px; animation: slotIn .3s both; }
 .peek .bubble { background: #fff; border: 1px solid var(--line); }
 @media (prefers-reduced-motion: reduce) { .peek { animation: none; } }
+
+.drv .trk { background: var(--wash); border-radius: 6px; height: 12px; overflow: hidden; }
+.drv .trk i { height: 12px; border-radius: 6px; }

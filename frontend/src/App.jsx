@@ -19,7 +19,18 @@ const NAMES = {
   recency: "Time since last visit", last_cumnoshow: "Past no-shows", last_cumrev: "Past spend",
   last_receipt_tot: "Size of last bill", last_cumbook: "Past bookings", last_cumcancel: "Past cancellations",
 };
-const pretty = (f) => NAMES[f] || f.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+const pretty = (f) => {
+  if (NAMES[f]) return NAMES[f];
+  let m = f.match(/^(book|last)_(category|staff|dow|tod)_(.+)$/i);
+  if (m) {
+    const kind = { category: "service", staff: "staff", dow: "day", tod: "time of day" }[m[2].toLowerCase()];
+    const val = m[3].toLowerCase().replace(/^./, (c) => c.toUpperCase());
+    return (m[1] === "last" ? "Previous " : "Booked ") + kind + ": " + val;
+  }
+  m = f.match(/^last_cum(.+)$/i);
+  if (m) return "Past " + m[1].toLowerCase() + " (total)";
+  return f.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+};
 
 const levelOf = (r) => r.level || (r.riskScore >= 0.7 ? "high" : r.riskScore >= 0.4 ? "medium" : "low");
 
@@ -317,7 +328,7 @@ export default function App() {
             {info.topFeatures.map((f) => (
               <div className="drv" key={f.feature}>
                 <span>{pretty(f.feature)}</span>
-                <i style={{ width: `${Math.max(4, (f.importance / maxImp) * 100)}%` }} />
+                <div className="trk"><i style={{ width: `${Math.max(4, (f.importance / maxImp) * 100)}%` }} /></div>
               </div>
             ))}
           </div>
