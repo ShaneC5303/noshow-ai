@@ -140,3 +140,18 @@ button.slot { width: 100%; font: inherit; text-align: left; color: inherit; curs
 
 .drv .trk { background: var(--wash); border-radius: 6px; height: 12px; overflow: hidden; }
 .drv .trk i { height: 12px; border-radius: 6px; }
+
+.how { margin-bottom: 56px; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 2px solid var(--ink); }
+.st { padding: 20px 28px 8px 0; }
+.st + .st { padding-left: 28px; border-left: 1px solid var(--line); }
+.stn { font-family: var(--serif); font-weight: 600; font-size: 24px; letter-spacing: -.01em; }
+.st p { color: var(--muted); max-width: 34ch; margin: 8px 0 0; }
+.proof { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
+.proof > div { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+.proof b { display: block; font-family: var(--serif); font-weight: 600; font-size: 34px; letter-spacing: -.02em; color: var(--pine); line-height: 1.1; }
+.proof span { font-size: 13px; color: var(--muted); }
+@media (max-width: 960px) {
+  .steps, .proof { grid-template-columns: 1fr; }
+  .st, .st + .st { padding: 18px 0 6px; border-left: 0; border-bottom: 1px solid var(--line); }
+}

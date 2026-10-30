@@ -293,6 +293,22 @@ export default function App() {
         <div className="fig"><div className="n">{ready}</div><div className="l">Reminders written</div></div>
       </div>
 
+      <section className="how">
+        <h2 className="sec">From a booking list to a saved appointment</h2>
+        <p className="sec-sub">Three steps, one upload. No setup and no data science needed.</p>
+        <div className="steps">
+          <div className="st"><span className="stn">Predict</span><p>Learns from your past bookings who tends to miss, and gives every new booking a no-show chance.</p></div>
+          <div className="st"><span className="stn">Explain</span><p>Shows the reasons behind each score, such as a long wait or past no-shows, so staff can trust it.</p></div>
+          <div className="st"><span className="stn">Prevent</span><p>Writes a short, polite reminder for each risky booking, ready to copy or send on WhatsApp.</p></div>
+        </div>
+        <div className="proof">
+          <div><b>0.72</b><span>ROC-AUC on clinic visits, cross-validated</span></div>
+          <div><b>0.67</b><span>ROC-AUC on a hair-salon dataset, same method</span></div>
+          <div><b>3.3×</b><span>more no-shows in the riskiest 10% of the salon file than average</span></div>
+        </div>
+        <p className="out">Scores are estimates that rank who is most at risk. Use them to decide who to remind first, not to turn anyone away.</p>
+      </section>
+
       {pending && (
         <div className="picker">
           <h2 className="sec" style={{ fontSize: 22 }}>Which column says who didn't show up?</h2>
