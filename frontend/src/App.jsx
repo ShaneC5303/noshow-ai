@@ -221,6 +221,7 @@ export default function App() {
   const avg = s ? Math.round(s.avgRisk * 100) : rows.length ? Math.round((rows.reduce((a, r) => a + r.riskScore, 0) / rows.length) * 100) : 0;
   const ready = rows.filter((r) => r.reminderMessage).length;
   const maxImp = info ? info.topFeatures[0].importance || 1 : 1;
+  const totImp = info ? info.topFeatures.reduce((a, f) => a + f.importance, 0) || 1 : 1;
   const sel = SLOTS[pick];
 
   return (
@@ -363,11 +364,12 @@ export default function App() {
             </div>
             <div>
               <h2 className="sec" style={{ fontSize: 24 }}>What drives no-shows here</h2>
-              <p className="sec-sub">Longer bars matter more to the model.</p>
+              <p className="sec-sub">Longer bars matter more to the model. Each number is that factor's share of the influence among these top factors.</p>
               {info.topFeatures.map((f) => (
                 <div className="drv" key={f.feature}>
                   <span>{pretty(f.feature)}</span>
                   <div className="trk"><i style={{ width: `${Math.max(4, (f.importance / maxImp) * 100)}%` }} /></div>
+                  <b className="val">{Math.round((f.importance / totImp) * 100)}%</b>
                 </div>
               ))}
             </div>

@@ -97,7 +97,7 @@ h2.sec { font-family: var(--serif); font-weight: 600; font-size: 32px; letter-sp
 .note { margin-top: 14px; padding: 10px 14px; border-left: 3px solid var(--amber); background: var(--amberbg); color: #6b4505; font-size: 14px; max-width: 56ch; }
 .out { margin-top: 14px; font-size: 14px; color: var(--muted); max-width: 60ch; }
 .out b { color: var(--ink); font-weight: 600; }
-.drv { display: grid; grid-template-columns: minmax(120px, 210px) 1fr; gap: 12px; align-items: center; margin-bottom: 10px; font-size: 14px; }
+.drv { display: grid; grid-template-columns: minmax(120px, 210px) 1fr 44px; gap: 12px; align-items: center; margin-bottom: 10px; font-size: 14px; }
 .drv span { color: var(--muted); }
 .drv .trk { background: var(--wash); border-radius: 6px; height: 12px; overflow: hidden; }
 .drv .trk i { display: block; height: 12px; border-radius: 6px; background: var(--pine); }
@@ -175,3 +175,5 @@ h2.sec { font-family: var(--serif); font-weight: 600; font-size: 32px; letter-sp
   .slots::after { display: none; }
 }
 @media print { .cta, .acts { display: none; } }
+
+.drv .val { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
