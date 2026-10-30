@@ -3,7 +3,15 @@ import { useEffect, useRef, useState } from "react";
 const DEMO_URL = "https://noshow-ai.onrender.com/api/bookings";
 const API = "https://noshow-ai-api.onrender.com";
 const STEPS = ["Reading your file", "Training a model on it", "Working out why bookings are risky", "Writing the reminders"];
-const SLOTS = [["9:00", 70, 0], ["9:30", 48, 0], ["10:00", 62, 1], ["10:30", 82, 0], ["11:00", 54, 0], ["11:30", 66, 1], ["12:00", 40, 0]];
+const SLOTS = [
+  { t: "9:00", w: 70 }, { t: "9:30", w: 48 },
+  { t: "10:00", w: 62, risk: 86, why: [["Long wait before the visit", "+0.97"], ["Patient age", "+0.50"]],
+    msg: "Hi! It has been almost two months since you booked. Reply C to confirm, or text us if you need a new time." },
+  { t: "10:30", w: 82 }, { t: "11:00", w: 54 },
+  { t: "11:30", w: 66, risk: 74, why: [["Past no-shows", "+0.88"], ["No SMS reminder sent", "+0.41"]],
+    msg: "Reminder: your appointment is tomorrow at 11:30. Reply YES to keep it, or tell us and we will offer the slot to someone else." },
+  { t: "12:00", w: 40 },
+];
 
 const NAMES = {
   LeadDays: "Long wait before the visit", lead_days: "Long wait before the visit", Age: "Patient age",
@@ -108,6 +116,7 @@ export default function App() {
   const [single, setSingle] = useState(null);
   const [scoring, setScoring] = useState(false);
   const fileRef = useRef(null);
+  const [pick, setPick] = useState(2);
 
   useEffect(() => {
     if (!loading) { setStep(0); return; }
@@ -240,15 +249,29 @@ export default function App() {
         <div className="sheet" aria-label="Example schedule with two likely no-shows">
           <div className="sheet-h"><b>Tomorrow's schedule</b><span>2 of 7 likely to be missed</span></div>
           <ul className="slots">
-            {SLOTS.map(([t, w, ghost], i) => (
-              <li key={t} className={`slot ${ghost ? "ghost" : ""}`} style={{ "--i": i }}>
-                <span className="t">{t}</span>
-                <span className="who" style={{ width: `${w}%` }} />
-                {ghost ? <span className="flag">Likely no-show</span> : <span />}
+            {SLOTS.map((x, i) => x.risk ? (
+              <li key={x.t} style={{ "--i": i }}>
+                <button className={`slot ghost ${pick === i ? "sel" : ""}`} style={{ "--i": i }} onClick={() => setPick(i)} aria-pressed={pick === i}>
+                  <span className="t">{x.t}</span>
+                  <span className="who" style={{ width: `${x.w}%` }} />
+                  <span className="flag">{x.risk}% likely no-show</span>
+                </button>
+              </li>
+            ) : (
+              <li key={x.t} className="slot" style={{ "--i": i }}>
+                <span className="t">{x.t}</span>
+                <span className="who" style={{ width: `${x.w}%` }} />
+                <span />
               </li>
             ))}
           </ul>
-          <p className="sheet-f">Find the empty slots in advance, then remind those clients.</p>
+          {SLOTS[pick] && SLOTS[pick].risk && (
+            <div className="peek" key={pick}>
+              <ul className="why">{SLOTS[pick].why.map(([n, v]) => <li key={n}>{n} <em>{v}</em></li>)}</ul>
+              <div className="bubble">{SLOTS[pick].msg}</div>
+            </div>
+          )}
+          <p className="sheet-f">Tap a flagged slot to see why, and the reminder that saves it.</p>
         </div>
       </section>
 

@@ -59,12 +59,12 @@ button { font: inherit; cursor: pointer; }
 @keyframes flagIn { to { opacity: 1; } }
 .sheet-f { margin: 14px 0 0; font-size: 13px; color: var(--muted); }
 
-.ledger { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 0 44px; }
-.fig { padding: 20px 22px; border-left: 1px solid var(--line); }
-.fig:first-child { border-left: 0; padding-left: 0; }
+.ledger { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--pine-d); color: #fff; border-radius: 18px; margin: 0 0 56px; }
+.fig { padding: 26px 28px; border-left: 1px solid rgba(255,255,255,.14); }
+.fig:first-child { border-left: 0; }
 .fig .n { font-family: var(--serif); font-weight: 600; font-size: 38px; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.fig .n.flag { color: var(--flag); }
-.fig .l { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.fig .n.flag { color: #ff9a85; }
+.fig .l { font-size: 13px; color: rgba(255,255,255,.72); margin-top: 2px; }
 
 h2.sec { font-family: var(--serif); font-weight: 600; font-size: 28px; letter-spacing: -.02em; margin: 0 0 6px; }
 .sec-sub { color: var(--muted); margin: 0 0 22px; max-width: 62ch; }
@@ -117,8 +117,8 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); display: flex; 
   .hero { grid-template-columns: 1fr; gap: 32px; padding: 32px 0; }
   .two { grid-template-columns: 1fr; gap: 28px; }
   .ledger { grid-template-columns: 1fr 1fr; }
-  .fig:nth-child(3) { border-left: 0; padding-left: 0; }
-  .fig:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .fig:nth-child(3) { border-left: 0; }
+  .fig:nth-child(n+3) { border-top: 1px solid rgba(255,255,255,.14); }
   .cols { display: none; }
   .entry { grid-template-columns: 1fr; gap: 14px; }
   .c::before { display: block; content: attr(data-label); font-family: var(--serif); font-weight: 600; font-size: 14px; color: var(--muted); margin-bottom: 4px; }
@@ -129,3 +129,11 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); display: flex; 
   .slot.ghost { background-color: transparent; }
 }
 @media print { .cta, .acts { display: none; } }
+
+.slots li { list-style: none; }
+button.slot { width: 100%; font: inherit; text-align: left; color: inherit; cursor: pointer; }
+.slot.ghost.sel { box-shadow: 0 0 0 3px rgba(209, 67, 47, .18); }
+.slot .flag { white-space: nowrap; }
+.peek { margin-top: 14px; padding: 14px; border-radius: 12px; background: var(--paper); display: grid; gap: 12px; animation: slotIn .3s both; }
+.peek .bubble { background: #fff; border: 1px solid var(--line); }
+@media (prefers-reduced-motion: reduce) { .peek { animation: none; } }
