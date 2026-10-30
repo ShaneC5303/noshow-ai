@@ -2,24 +2,30 @@ import { useEffect, useRef, useState } from "react";
 
 const DEMO_URL = "https://noshow-ai.onrender.com/api/bookings";
 const API = "https://noshow-ai-api.onrender.com";
+const STEPS = ["Reading your file", "Training a model on it", "Working out why bookings are risky", "Writing the reminders"];
+const SLOTS = [["9:00", 70, 0], ["9:30", 48, 0], ["10:00", 62, 1], ["10:30", 82, 0], ["11:00", 54, 0], ["11:30", 66, 1], ["12:00", 40, 0]];
 
-const card = { background: "#f7f7f8", borderRadius: 12, padding: "18px 12px", textAlign: "center", color: "#111" };
-const panel = { background: "#f7f7f8", color: "#111", borderRadius: 12, padding: 18, marginBottom: 24 };
-const btn = { background: "#fff", color: "#111", border: "1px solid #d0d0d5", borderRadius: 8, padding: "9px 14px", fontWeight: 600, cursor: "pointer", fontSize: 14 };
-const input = { padding: "9px 10px", borderRadius: 8, border: "1px solid #d0d0d5", width: 110, fontSize: 14, color: "#111", background: "#fff" };
-const lbl = { display: "flex", flexDirection: "column", fontSize: 12, color: "#555", gap: 4 };
+const NAMES = {
+  LeadDays: "Long wait before the visit", lead_days: "Long wait before the visit", Age: "Patient age",
+  Scholarship: "Scholarship", Hipertension: "Hypertension", Diabetes: "Diabetes", SMS_received: "SMS reminder sent",
+  recency: "Time since last visit", last_cumnoshow: "Past no-shows", last_cumrev: "Past spend",
+  last_receipt_tot: "Size of last bill", last_cumbook: "Past bookings", last_cumcancel: "Past cancellations",
+};
+const pretty = (f) => NAMES[f] || f.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 
-function badge(r) {
-  const level = r.level || (r.riskScore >= 0.7 ? "high" : r.riskScore >= 0.4 ? "medium" : "low");
-  if (level === "high") return { bg: "#fdecea", fg: "#b3261e" };
-  if (level === "medium") return { bg: "#fff4e0", fg: "#a35b00" };
-  return { bg: "#e6f4ea", fg: "#1e7a34" };
-}
+const levelOf = (r) => r.level || (r.riskScore >= 0.7 ? "high" : r.riskScore >= 0.4 ? "medium" : "low");
 
 function describe(r) {
   if (r.details) return r.details;
   if (r.age !== undefined) return `Age ${r.age} · booked ${r.leadDays} days ahead`;
   return "";
+}
+function bookingText(r) {
+  return describe(r).split(" · ").map((p) => { const i = p.indexOf(": "); return i > 0 ? p.slice(i + 2) : p; }).join(" · ");
+}
+function parseReason(t) {
+  const m = t.match(/^(.*?) \(([+-][\d.]+)\)$/);
+  return m ? { name: pretty(m[1]), val: m[2] } : { name: t, val: "" };
 }
 
 function downloadCsv(rows) {
@@ -35,11 +41,65 @@ function downloadCsv(rows) {
   a.click();
 }
 
+function Pips({ pct, lv }) {
+  const n = Math.round(pct / 10);
+  return <div className={`pips ${lv}`} aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <i key={i} className={i < n ? "f" : ""} />)}</div>;
+}
+
+function Actions({ text, id, copied, onCopy }) {
+  if (!text) return null;
+  return (
+    <div className="acts">
+      <button className="btn sm" onClick={() => onCopy(id, text)}>{copied === id ? "Copied" : "Copy"}</button>
+      <button className="btn sm" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank")}>Send on WhatsApp</button>
+    </div>
+  );
+}
+
+function Entry({ r, rank, id, copied, onCopy }) {
+  const lv = levelOf(r);
+  const pct = Math.round(r.riskScore * 100);
+  return (
+    <div className="entry">
+      <div className="c c-book" data-label="Booking" title={describe(r)}>
+        {rank != null && <span className="rk">{rank}</span>}
+        <span className="bk">{bookingText(r)}</span>
+      </div>
+      <div className="c" data-label="Predict">
+        <span className={`pct ${lv}`}>{pct}%</span>
+        <Pips pct={pct} lv={lv} />
+      </div>
+      <div className="c" data-label="Explain">
+        <ul className="why">
+          {(r.reasons || []).map((t, k) => { const p = parseReason(t); return <li key={k}>{p.name} {p.val && <em>{p.val}</em>}</li>; })}
+        </ul>
+      </div>
+      <div className="c" data-label="Prevent">
+        <div className={`bubble ${r.reminderMessage ? "" : "empty"}`}>{r.reminderMessage || "No reminder was generated for this booking."}</div>
+        <Actions text={r.reminderMessage} id={id} copied={copied} onCopy={onCopy} />
+      </div>
+    </div>
+  );
+}
+
+function Mark() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+      <rect x="1.5" y="1.5" width="25" height="25" rx="7" fill="#1b5e52" />
+      <rect x="7" y="8" width="14" height="3.2" rx="1.6" fill="#fff" />
+      <rect x="7" y="13" width="14" height="3.2" rx="1.6" fill="#fff" opacity=".55" />
+      <rect x="7" y="18" width="14" height="3.2" rx="1.6" stroke="#fff" strokeWidth="1.3" strokeDasharray="2.4 2" />
+    </svg>
+  );
+}
+
 export default function App() {
   const [rows, setRows] = useState([]);
   const [info, setInfo] = useState(null);
   const [mode, setMode] = useState("demo");
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(0);
+  const [drag, setDrag] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(null);
   const [pending, setPending] = useState(null);
@@ -49,12 +109,18 @@ export default function App() {
   const [scoring, setScoring] = useState(false);
   const fileRef = useRef(null);
 
+  useEffect(() => {
+    if (!loading) { setStep(0); return; }
+    const t = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 5000);
+    return () => clearInterval(t);
+  }, [loading]);
+
   const loadDemo = () => {
     setMode("demo");
     setInfo(null);
     setPending(null);
     setError("");
-    fetch(DEMO_URL).then((r) => r.json()).then(setRows).catch(() => setError("Could not load demo data."));
+    fetch(DEMO_URL).then((r) => r.json()).then(setRows).catch(() => setError("Could not load the demo bookings. The server may be waking up. Try again in a minute."));
   };
   useEffect(loadDemo, []);
 
@@ -69,17 +135,17 @@ export default function App() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
       if (data.needs_target) {
-        const first = (data.candidates && data.candidates[0]) || data.columns[0];
         setPending({ file, candidates: data.candidates || [], columns: data.columns });
-        setPicked(first);
+        setPicked((data.candidates && data.candidates[0]) || data.columns[0]);
       } else {
         setPending(null);
         setRows(data.results);
         setInfo(data.mode === "trained" ? data : null);
         setMode("upload");
+        setTimeout(() => { const el = document.getElementById("results"); if (el) el.scrollIntoView({ behavior: "smooth" }); }, 100);
       }
     } catch (err) {
-      setError(err.message || "Upload failed");
+      setError(err.message || "Upload failed. Check the file and try again.");
     }
     setLoading(false);
   };
@@ -87,6 +153,12 @@ export default function App() {
   const onFile = (e) => {
     const file = e.target.files[0];
     e.target.value = "";
+    if (file) send(file, null);
+  };
+  const onDrop = (e) => {
+    e.preventDefault();
+    setDrag(false);
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
     if (file) send(file, null);
   };
 
@@ -100,12 +172,9 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          age: Number(form.age),
-          leadDays: Number(form.leadDays),
-          scholarship: +form.scholarship,
-          hipertension: +form.hipertension,
-          diabetes: +form.diabetes,
-          sms: +form.sms,
+          age: Number(form.age), leadDays: Number(form.leadDays),
+          scholarship: +form.scholarship, hipertension: +form.hipertension,
+          diabetes: +form.diabetes, sms: +form.sms,
         }),
       });
       const data = await res.json();
@@ -117,172 +186,169 @@ export default function App() {
     setScoring(false);
   };
 
-  const copy = (i, text) => {
+  const onCopy = (id, text) => {
     navigator.clipboard.writeText(text).then(() => {
-      setCopied(i);
+      setCopied(id);
       setTimeout(() => setCopied(null), 1500);
     });
   };
-  const wa = (text) => window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
 
   const s = info && info.summary;
   const scored = s ? s.scored : rows.length;
   const high = s ? s.highRisk : rows.filter((r) => r.riskScore >= 0.7).length;
   const avg = s ? Math.round(s.avgRisk * 100) : rows.length ? Math.round((rows.reduce((a, r) => a + r.riskScore, 0) / rows.length) * 100) : 0;
   const ready = rows.filter((r) => r.reminderMessage).length;
-
-  const Actions = ({ text, i }) =>
-    text ? (
-      <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginTop: 8 }}>
-        <button style={{ ...btn, padding: "5px 10px", fontSize: 12 }} onClick={() => copy(i, text)}>
-          {copied === i ? "Copied" : "Copy"}
-        </button>
-        <button style={{ ...btn, padding: "5px 10px", fontSize: 12 }} onClick={() => wa(text)}>
-          WhatsApp
-        </button>
-      </div>
-    ) : null;
+  const maxImp = info ? info.topFeatures[0].importance || 1 : 1;
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto", padding: "28px 16px 60px", color: "#ddd", fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12, alignItems: "flex-start" }}>
+    <div className="wrap">
+      <nav className="nav">
+        <div className="mark"><Mark />No-Show AI</div>
+        <div className="status"><i />{mode === "demo" ? "Showing demo bookings" : "Showing your file"}</div>
+      </nav>
+
+      <section className={`hero ${drag ? "drag" : ""}`}
+        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={onDrop}>
         <div>
-          <h1 style={{ margin: 0, color: "#fff", fontSize: 30 }}>No-show risk dashboard</h1>
-          <p style={{ margin: "6px 0 0", color: "#8a8a93" }}>Predicting and preventing appointment no-shows with AI</p>
+          <h1 className="display">Spot the <span style={{ whiteSpace: "nowrap" }}>no-shows</span> before they happen.</h1>
+          <p className="lede">Upload your bookings. We learn who tends to miss, show why each booking is at risk, and write the reminder that gets them to confirm.</p>
+          {!loading && (
+            <div className="cta">
+              <input ref={fileRef} type="file" accept=".csv" onChange={onFile} style={{ display: "none" }} />
+              <button className="btn solid" onClick={() => fileRef.current.click()}>Upload a CSV</button>
+              {mode === "upload"
+                ? <button className="btn" onClick={loadDemo}>Back to demo bookings</button>
+                : <button className="btn" onClick={() => document.getElementById("results").scrollIntoView({ behavior: "smooth" })}>See the demo</button>}
+            </div>
+          )}
+          {loading && (
+            <ul className="prog">
+              {STEPS.map((t, i) => (
+                <li key={t} className={i < step ? "done" : i === step ? "on" : ""}>
+                  <span className="ic">{i < step ? "✓" : ""}</span>{t}
+                </li>
+              ))}
+            </ul>
+          )}
+          {!loading && <p className="hint">Drop a file anywhere on this section. Any CSV with a no-show column works (Yes/No or 1/0).</p>}
+          {loading && <p className="hint">The first request can take up to a minute while the server wakes up.</p>}
+          {error && <div className="err" role="alert">{error}</div>}
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <input ref={fileRef} type="file" accept=".csv" onChange={onFile} style={{ display: "none" }} />
-          <button style={btn} disabled={loading} onClick={() => fileRef.current.click()}>
-            {loading ? "Analyzing... (can take ~50s on first use)" : "Upload a CSV"}
-          </button>
-          {rows.length > 0 && <button style={btn} onClick={() => downloadCsv(rows)}>Download results</button>}
-          {mode === "upload" && <button style={btn} onClick={loadDemo}>Back to demo data</button>}
+
+        <div className="sheet" aria-label="Example schedule with two likely no-shows">
+          <div className="sheet-h"><b>Tomorrow's schedule</b><span>2 of 7 likely to be missed</span></div>
+          <ul className="slots">
+            {SLOTS.map(([t, w, ghost], i) => (
+              <li key={t} className={`slot ${ghost ? "ghost" : ""}`} style={{ "--i": i }}>
+                <span className="t">{t}</span>
+                <span className="who" style={{ width: `${w}%` }} />
+                {ghost ? <span className="flag">Likely no-show</span> : <span />}
+              </li>
+            ))}
+          </ul>
+          <p className="sheet-f">Find the empty slots in advance, then remind those clients.</p>
         </div>
+      </section>
+
+      <div className="ledger">
+        <div className="fig"><div className="n">{scored.toLocaleString()}</div><div className="l">Bookings scored</div></div>
+        <div className="fig"><div className="n flag">{high.toLocaleString()}</div><div className="l">{info ? "Flagged as high risk (top 10%)" : "Flagged as high risk (70%+)"}</div></div>
+        <div className="fig"><div className="n">{avg}%</div><div className="l">Average no-show risk</div></div>
+        <div className="fig"><div className="n">{ready}</div><div className="l">Reminders written</div></div>
       </div>
-
-      <p style={{ color: "#8a8a93", fontSize: 13, margin: "14px 0 0" }}>
-        Upload any CSV that has a no-show column (for example Yes/No or 1/0). The app trains a model on your file, then scores and explains it.
-      </p>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 14, margin: "20px 0" }}>
-        <div style={card}><div style={{ color: "#555" }}>Bookings scored</div><div style={{ fontSize: 32, fontWeight: 600 }}>{scored.toLocaleString()}</div></div>
-        <div style={card}><div style={{ color: "#555" }}>{info ? "High risk (top 10%)" : "High risk (70%+)"}</div><div style={{ fontSize: 32, fontWeight: 600, color: "#b3261e" }}>{high.toLocaleString()}</div></div>
-        <div style={card}><div style={{ color: "#555" }}>Avg. risk score</div><div style={{ fontSize: 32, fontWeight: 600 }}>{avg}%</div></div>
-        <div style={card}><div style={{ color: "#555" }}>Reminders ready</div><div style={{ fontSize: 32, fontWeight: 600, color: "#1e7a34" }}>{ready}</div></div>
-      </div>
-
-      {error && <p style={{ color: "#ff8a80", textAlign: "center" }}>{error}</p>}
-      {loading && <p style={{ textAlign: "center", color: "#8a8a93" }}>Training on your file and scoring it. This can take up to a minute on the first request...</p>}
 
       {pending && (
-        <div style={panel}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Which column says whether the client was a no-show?</div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <select value={picked} onChange={(e) => setPicked(e.target.value)} style={{ ...input, width: 240 }}>
+        <div className="picker">
+          <h2 className="sec" style={{ fontSize: 22 }}>Which column says who didn't show up?</h2>
+          <p className="sec-sub" style={{ marginBottom: 0 }}>Pick a column with exactly two values, such as Yes/No or 0/1.</p>
+          <div className="row">
+            <select value={picked} onChange={(e) => setPicked(e.target.value)} style={{ minWidth: 240 }}>
               {pending.candidates.length > 0 && (
-                <optgroup label="Likely">
-                  {pending.candidates.map((c) => <option key={"c" + c} value={c}>{c}</option>)}
-                </optgroup>
+                <optgroup label="Likely">{pending.candidates.map((c) => <option key={"c" + c} value={c}>{c}</option>)}</optgroup>
               )}
-              <optgroup label="All columns">
-                {pending.columns.map((c) => <option key={c} value={c}>{c}</option>)}
-              </optgroup>
+              <optgroup label="All columns">{pending.columns.map((c) => <option key={c} value={c}>{c}</option>)}</optgroup>
             </select>
-            <button style={btn} disabled={loading} onClick={() => send(pending.file, picked)}>Train &amp; score</button>
-            <button style={btn} onClick={() => setPending(null)}>Cancel</button>
+            <button className="btn solid" disabled={loading} onClick={() => send(pending.file, picked)}>Train and score</button>
+            <button className="btn" onClick={() => setPending(null)}>Cancel</button>
           </div>
-          <div style={{ fontSize: 12, color: "#666", marginTop: 8 }}>The column must have exactly two values, such as Yes/No or 0/1.</div>
         </div>
       )}
 
       {info && (
-        <div style={panel}>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Model trained on your file</div>
-          <div style={{ fontSize: 14, lineHeight: 1.7 }}>
-            Label column <b>{info.target}</b> ({info.mapping}) · {info.rowsUsed.toLocaleString()} rows · {(info.noShowRate * 100).toFixed(1)}% no-show rate
-            <br />
-            Cross-validated ROC-AUC <b>{info.cv.aucMean} ± {info.cv.aucStd}</b> ({info.cv.folds}-fold) · the riskiest 10% contain {info.cv.liftTop10}× the average no-show rate
+        <section className="block two">
+          <div>
+            <h2 className="sec">How well it works on your file</h2>
+            <p className="sec-sub">Trained on {info.rowsUsed.toLocaleString()} bookings, where the label column is <b>{info.target}</b> ({info.mapping}).</p>
+            <ul className="facts">
+              <li>The model ranked a real no-show above a real show <b>{Math.round(info.cv.aucMean * 100)}%</b> of the time (ROC-AUC {info.cv.aucMean} ± {info.cv.aucStd}, {info.cv.folds}-fold cross-validation).</li>
+              <li>The riskiest 10% of bookings hold <b>{info.cv.liftTop10}×</b> the average no-show rate of {(info.noShowRate * 100).toFixed(1)}%.</li>
+            </ul>
+            {info.warnings.map((w, i) => <div className="note" key={i}>{w}</div>)}
+            {info.dropped.length > 0 && <p className="out"><b>Left out automatically:</b> {info.dropped.join("; ")}.</p>}
           </div>
-          {info.warnings.map((w, i) => (
-            <div key={i} style={{ marginTop: 8, padding: "6px 10px", background: "#fff4e0", color: "#7a4500", borderRadius: 8, fontSize: 13 }}>{w}</div>
-          ))}
-          {info.dropped.length > 0 && (
-            <div style={{ marginTop: 8, fontSize: 13, color: "#555" }}>Left out automatically: {info.dropped.join("; ")}</div>
-          )}
-          <div style={{ marginTop: 12, fontSize: 13, color: "#555" }}>What drives no-shows in this file</div>
-          {info.topFeatures.map((f) => {
-            const max = info.topFeatures[0].importance || 1;
-            return (
-              <div key={f.feature} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 4 }}>
-                <div style={{ width: 190, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.feature}</div>
-                <div style={{ height: 10, borderRadius: 5, background: "#4c6ef5", width: `${Math.max(4, (f.importance / max) * 55)}%` }} />
+          <div>
+            <h2 className="sec" style={{ fontSize: 22 }}>What drives no-shows here</h2>
+            <p className="sec-sub">Longer bars matter more to the model.</p>
+            {info.topFeatures.map((f) => (
+              <div className="drv" key={f.feature}>
+                <span>{pretty(f.feature)}</span>
+                <i style={{ width: `${Math.max(4, (f.importance / maxImp) * 100)}%` }} />
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {mode === "demo" && (
-        <form onSubmit={scoreOne} style={panel}>
-          <div style={{ fontWeight: 700, marginBottom: 10 }}>Score a single booking (clinic model)</div>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <label style={lbl}>Age
-              <input style={input} type="number" min="0" required value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
+        <form className="try" onSubmit={scoreOne}>
+          <h2 className="sec" style={{ fontSize: 22 }}>Try one booking</h2>
+          <p className="sec-sub" style={{ marginBottom: 0 }}>Uses the pre-trained clinic model. Try age 12 and 60 days of lead time.</p>
+          <div className="row">
+            <label className="f">Age
+              <input type="number" min="0" required value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
             </label>
-            <label style={lbl}>Lead days
-              <input style={input} type="number" min="0" required value={form.leadDays} onChange={(e) => setForm({ ...form, leadDays: e.target.value })} />
+            <label className="f">Days booked ahead
+              <input type="number" min="0" required value={form.leadDays} onChange={(e) => setForm({ ...form, leadDays: e.target.value })} />
             </label>
-            {[["scholarship", "Scholarship"], ["hipertension", "Hypertension"], ["diabetes", "Diabetes"], ["sms", "SMS received"]].map(([k, label]) => (
-              <label key={k} style={{ fontSize: 14, paddingBottom: 9 }}>
+            {[["scholarship", "Scholarship"], ["hipertension", "Hypertension"], ["diabetes", "Diabetes"], ["sms", "SMS reminder sent"]].map(([k, label]) => (
+              <label className="ck" key={k}>
                 <input type="checkbox" checked={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.checked })} /> {label}
               </label>
             ))}
-            <button style={btn} disabled={scoring} type="submit">{scoring ? "Scoring..." : "Predict risk"}</button>
+            <button className="btn solid" disabled={scoring} type="submit">{scoring ? "Scoring..." : "Predict risk"}</button>
           </div>
           {single && (
-            <div style={{ marginTop: 14, borderTop: "1px solid #e2e2e6", paddingTop: 12 }}>
-              <span style={{ background: badge(single).bg, color: badge(single).fg, padding: "4px 12px", borderRadius: 999, fontWeight: 700 }}>
-                {Math.round(single.riskScore * 100)}% no-show risk
-              </span>
-              <span style={{ marginLeft: 12, color: "#555" }}>{(single.reasons || []).join(", ")}</span>
-              <p style={{ margin: "10px 0 0" }}>{single.reminderMessage}</p>
-              <Actions text={single.reminderMessage} i="single" />
+            <div className="out-r">
+              <Entry r={{ ...single, details: `Age ${single.age} · booked ${single.leadDays} days ahead` }} rank={null} id="single" copied={copied} onCopy={onCopy} />
             </div>
           )}
         </form>
       )}
 
-      <div style={{ background: "#fff", color: "#111", borderRadius: 12, overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
-          <thead>
-            <tr style={{ background: "#f7f7f8", color: "#777", fontSize: 13 }}>
-              {["Booking", "Risk", "Key factors", "Reminder message"].map((h) => (
-                <th key={h} style={{ padding: 14, fontWeight: 500 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => {
-              const b = badge(r);
-              return (
-                <tr key={i} style={{ borderTop: "1px solid #eee", textAlign: "center", fontSize: 14 }}>
-                  <td style={{ padding: 12, maxWidth: 240, fontSize: 13, color: "#444" }}>{describe(r)}</td>
-                  <td style={{ padding: 12 }}>
-                    <span style={{ background: b.bg, color: b.fg, padding: "4px 10px", borderRadius: 999, fontWeight: 700 }}>
-                      {Math.round(r.riskScore * 100)}%
-                    </span>
-                  </td>
-                  <td style={{ padding: 12 }}>{(r.reasons || []).join(", ")}</td>
-                  <td style={{ padding: 12, lineHeight: 1.6 }}>
-                    {r.reminderMessage}
-                    <Actions text={r.reminderMessage} i={i} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <section id="results" className="block">
+        <div className="rhead">
+          <div>
+            <h2 className="sec">{mode === "demo" ? "Demo bookings" : "Riskiest bookings in your file"}</h2>
+            <p className="sec-sub">Ordered from most to least likely to be missed.</p>
+          </div>
+          {rows.length > 0 && <button className="link" onClick={() => downloadCsv(rows)}>Download results as CSV</button>}
+        </div>
+        <div className="cols" aria-hidden="true">
+          <div><b>Booking</b><span>The appointment</span></div>
+          <div><b>Predict</b><span>Risk of a no-show</span></div>
+          <div><b>Explain</b><span>What drives it</span></div>
+          <div><b>Prevent</b><span>Reminder to send</span></div>
+        </div>
+        {rows.map((r, i) => <Entry key={i} r={r} rank={i + 1} id={i} copied={copied} onCopy={onCopy} />)}
+        {rows.length === 0 && !error && <p className="sec-sub" style={{ marginTop: 20 }}>Loading demo bookings...</p>}
+      </section>
+
+      <footer>
+        <span>Predicting and preventing appointment no-shows with AI</span>
+        <span>Capstone project · Team 33 · KLH University</span>
+      </footer>
     </div>
   );
 }
