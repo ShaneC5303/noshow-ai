@@ -92,11 +92,17 @@ function Actions({ text, id, copied, onCopy, contact }) {
   };
   const waUrl = (num) => {
     let d = String(num).replace(/\D/g, "");
+    if (d.length > 10 && d.startsWith("0")) d = d.replace(/^0+/, "");
     if (d.length === 10) d = "91" + d;
-    return `https://wa.me/${d}?text=${encodeURIComponent(text)}`;
+    return `https://api.whatsapp.com/send?phone=${d}&text=${encodeURIComponent(text)}`;
+  };
+  const openWa = (num) => {
+    const url = waUrl(num);
+    const w = window.open(url, "_blank");
+    if (!w) window.location.href = url;
   };
   const onEmail = () => { if (c.email) { setOpen(""); mailTo(c.email); } else toggle("mail"); };
-  const onWa = () => { if (c.phone) window.open(waUrl(c.phone), "_blank"); else toggle("wa"); };
+  const onWa = () => { if (c.phone) openWa(c.phone); else toggle("wa"); };
   return (
     <div className="acts">
       <button className="btn sm" onClick={() => onCopy(id, text)}>{copied === id ? "Copied" : "Copy"}</button>
@@ -111,7 +117,7 @@ function Actions({ text, id, copied, onCopy, contact }) {
         </form>
       )}
       {open === "wa" && (
-        <form className="mailrow" onSubmit={(e) => { e.preventDefault(); window.open(waUrl(ph), "_blank"); }}>
+        <form className="mailrow" onSubmit={(e) => { e.preventDefault(); openWa(ph); }}>
           <input type="tel" required placeholder="98765 43210" value={ph} onChange={(e) => setPh(e.target.value)} />
           <button className="btn sm solid" type="submit">Open WhatsApp</button>
         </form>
